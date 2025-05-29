@@ -1,73 +1,3 @@
-//using LapShop.Bl;
-//using LapShop.Models;
-//using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-//using Microsoft.AspNetCore.Identity;
-//using LapShop.Bl
-//using Microsoft.EntityFrameworkCore;
-//using Microsoft.AspNetCore.Authentication.Cookies;
-//var builder = WebApplication.CreateBuilder(args);
-//builder.Services.AddControllersWithViews();
-//builder.Services.AddDbContext<LapShopContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-//builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-//{
-//options.Password.RequiredLength = 8;
-//options.Password.RequireNonAlphanumeric = true;
-//options.Password.RequireUppercase = true;
-//options.User.RequireUniqueEmail = true;
-//}).AddEntityFrameworkStores<LapShopContext>();
-
-//builder.Services.AddScoped<ICategories, ClsCategories>();
-//builder.Services.AddScoped<IItems, ClsItems>();
-//builder.Services.AddScoped<IItemTypes, ClsItemTypes>();
-//builder.Services.AddScoped<IOs, ClsOs>();
-
-//builder.Services.AddScoped<ISliders, ClsSliders>();
-//builder.Services.AddScoped<IItemImages, ClsItemImages>();
-//builder.Services.AddScoped<ISalesInvoice, ClsSalesInvoice>();
-//builder.Services.AddScoped<ISalesInvoiceItems, ClsSalesInvoiceItems>();
-
-
-//var app = builder.Build();
-//if (!app.Environment.IsDevelopment())
-//{
-//app.UseExceptionHandler("/Home/Error");
-//app.UseHsts();
-//}
-//app.UseHttpsRedirection();
-//app.UseStaticFiles();
-//app.UseRouting();
-//app.UseAuthentication();
-//app.UseAuthorization();
-//app.UseSession();
-
-//builder.Services.ConfigureApplicationCookie(options =>
-//{
-//options.AccessDeniedPath = "/Users/AccessDenied";
-//options.Cookie.Name = "Cookie";
-//options.Cookie.HttpOnly = true;
-//options.ExpireTimeSpan = TimeSpan.FromMinutes(720);
-//options.LoginPath = "/Users/Login";
-//options.ReturnUrlParameter = CookieAuthenticationDefaults.ReturnUrlParameter;
-//options.SlidingExpiration = true;
-//});
-
-//app.UseEndpoints(endpoints =>
-//{
-//endpoints.MapControllerRoute(
-//name: "admin",
-//pattern: "{area:exists}/{controller=Home}/{action=Index}"
-//);
-
-//endpoints.MapControllerRoute(
-//name: "default",
-//pattern: "{controller=Home}/{action=Index}/{id?}"
-//);
-
-//});
-
-
-
-//app.Run();
 using LapShop.Bl;
 using LapShop.Models;
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +23,40 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 	options.Password.RequireUppercase = true;
 	options.User.RequireUniqueEmail = true;
 }).AddEntityFrameworkStores<LapShopContext>();
+#endregion
+
+#region JWT Authentication Configuration
+
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]);
+
+// Only configure JWT here - cookies are already configured by AddIdentity
+builder.Services.AddAuthentication()
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+// Cookie settings (configured through Identity)
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = "LapShop.Auth";
+    options.LoginPath = "/Users/Login";
+    options.AccessDeniedPath = "/Users/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
+});
+
 #endregion
 
 #region Custom Services
